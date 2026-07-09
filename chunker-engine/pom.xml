@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.smartchunker</groupId>
+        <artifactId>smart-chunker-java</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>chunker-engine</artifactId>
+    <name>Chunker Engine</name>
+    <description>调度引擎层：多线程流水线、单机调度</description>
+
+    <dependencies>
+        <!-- 依赖 core 模块 -->
+        <dependency>
+            <groupId>com.smartchunker</groupId>
+            <artifactId>chunker-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+</project>
