@@ -1,0 +1,7 @@
+com\smartchunker\core\impl\MarkdownAstSmartChunker.class
+com\smartchunker\core\impl\MarkdownAstSmartChunker$SegmentType.class
+com\smartchunker\core\ChunkerFactory.class
+com\smartchunker\core\impl\MarkdownAstSmartChunker$ChunkSegment.class
+com\smartchunker\core\SmartChunker.class
+com\smartchunker\core\config\ChunkConfig.class
+com\smartchunker\core\model\DocumentChunk.class
