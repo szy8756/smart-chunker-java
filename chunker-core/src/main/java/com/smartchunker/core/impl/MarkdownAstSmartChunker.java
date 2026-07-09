@@ -4,6 +4,7 @@ import com.smartchunker.core.SmartChunker;
 import com.smartchunker.core.config.ChunkConfig;
 import com.smartchunker.core.model.DocumentChunk;
 import com.vladsch.flexmark.ast.*;
+import com.vladsch.flexmark.ext.tables.TableBlock;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.NodeVisitor;
@@ -58,7 +59,7 @@ public class MarkdownAstSmartChunker implements SmartChunker {
                             headingStack,
                             codeBlock.getChars().toString(),
                             codeBlock.getLineNumber(),
-                            SegmentType.CODE_BLOCK
+                            SegmentType.ATOMIC_BLOCK
                     ));
                 }),
                 new VisitHandler<>(Paragraph.class, paragraph -> {
@@ -71,6 +72,14 @@ public class MarkdownAstSmartChunker implements SmartChunker {
                                 SegmentType.PARAGRAPH
                         ));
                     }
+                }),
+                new VisitHandler<>(TableBlock.class, table -> {
+                    segments.add(new ChunkSegment(
+                            headingStack,
+                            table.getChars().toString(),
+                            table.getLineNumber(),
+                            SegmentType.ATOMIC_BLOCK
+                    ));
                 })
         );
         visitor.visit(document);
@@ -106,7 +115,7 @@ public class MarkdownAstSmartChunker implements SmartChunker {
                 continue;
             }
 
-            boolean isAtomic = (seg.type == SegmentType.CODE_BLOCK);
+            boolean isAtomic = (seg.type == SegmentType.ATOMIC_BLOCK);
             boolean wouldExceed = buffer.length() + seg.content.length() > config.getMaxChunkSize();
             boolean shouldSplit = wouldExceed && !isAtomic;
 
@@ -130,7 +139,7 @@ public class MarkdownAstSmartChunker implements SmartChunker {
     }
 
     private enum SegmentType {
-        HEADING, PARAGRAPH, CODE_BLOCK
+        HEADING, PARAGRAPH, ATOMIC_BLOCK
     }
 
     private static class ChunkSegment {

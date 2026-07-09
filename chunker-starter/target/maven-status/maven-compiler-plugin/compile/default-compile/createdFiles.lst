@@ -1,0 +1,4 @@
+META-INF\spring-configuration-metadata.json
+com\smartchunker\starter\config\SmartChunkerAutoConfiguration.class
+com\smartchunker\starter\SmartChunkerTemplate.class
+com\smartchunker\starter\config\ChunkerProperties.class
