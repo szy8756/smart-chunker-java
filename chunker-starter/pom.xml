@@ -14,12 +14,30 @@
     <name>Chunker Starter</name>
     <description>框架整合层：Spring Boot AutoConfiguration 自动装配</description>
 
+    <properties>
+        <spring-boot.version>2.7.18</spring-boot.version>
+    </properties>
+
     <dependencies>
-        <!-- 依赖 engine 模块 -->
         <dependency>
             <groupId>com.smartchunker</groupId>
             <artifactId>chunker-engine</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <!-- Spring Boot 自动装配核心 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+
+        <!-- 配置文件提示（IDE 中写 yml 时有智能提示） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <version>${spring-boot.version}</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

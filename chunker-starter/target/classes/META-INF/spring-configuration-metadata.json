@@ -1,0 +1,36 @@
+{
+  "groups": [
+    {
+      "name": "smart-chunker.strategy",
+      "type": "com.smartchunker.starter.config.ChunkerProperties",
+      "sourceType": "com.smartchunker.starter.config.ChunkerProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "smart-chunker.strategy.include-context-path",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.smartchunker.starter.config.ChunkerProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "smart-chunker.strategy.max-chunk-size",
+      "type": "java.lang.Integer",
+      "sourceType": "com.smartchunker.starter.config.ChunkerProperties",
+      "defaultValue": 800
+    },
+    {
+      "name": "smart-chunker.strategy.overlap-size",
+      "type": "java.lang.Integer",
+      "sourceType": "com.smartchunker.starter.config.ChunkerProperties",
+      "defaultValue": 100
+    },
+    {
+      "name": "smart-chunker.strategy.protect-code-block",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.smartchunker.starter.config.ChunkerProperties",
+      "defaultValue": true
+    }
+  ],
+  "hints": []
+}
