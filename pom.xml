@@ -17,6 +17,9 @@
         <module>chunker-core</module>
         <module>chunker-engine</module>
         <module>chunker-starter</module>
+        <module>embed-core</module>
+        <module>vector-store</module>
+        <module>vector-engine</module>
     </modules>
 
     <!-- ========== 统一版本管理 ========== -->

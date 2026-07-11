@@ -4,6 +4,24 @@
 # Log file
 *.log
 
+# Build output
+target/
+
+# Maven
+.mvn/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
 # BlueJ files
 *.ctxt
 

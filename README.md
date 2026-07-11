@@ -35,6 +35,8 @@
   - [API 编程式调用](#1-api-编程式调用)
   - [Spring Boot 自动装配](#2-spring-boot-自动装配)
   - [引擎批量处理](#3-引擎批量处理)
+  - [向量管道 v2.0](#4-向量管道v20)
+  - [向量存储独立使用](#5-向量存储独立使用)
 - [配置说明](#-配置说明)
 - [性能基准](#-性能基准)
 - [路线图](#-路线图)
@@ -74,6 +76,8 @@
 - **🛡️ 原子块保护** — 自动识别 `FencedCodeBlock` 和 `TableBlock`，无论长度如何，强制作为不可分割的原子单元保留
 - **🪟 上下文路径** — 每个 Chunk 自动携带上级标题路径（如 `第 2 章 > 2.1 节 > 配置说明`），大幅提升向量检索精度
 - **⚡ 并发流水线** — 基于 `CompletableFuture` 实现多线程并行处理，充分利用多核 CPU
+- **🧠 本地向量库** — 内置 HNSW 向量索引，支持余弦相似度检索，无需外部向量数据库
+- **🤖 ONNX 推理** — 支持 ONNX Runtime 本地 Embedding 模型推理，完全离线运行
 - **🇨🇳 信创就绪** — 纯 Java 实现，零外部运行时依赖，完美适配麒麟（Kylin）等国产操作系统
 - **🔌 Spring Boot 集成** — 提供 `chunker-starter`，一行配置即可在 Spring Boot 项目中使用
 
@@ -94,22 +98,43 @@ smart-chunker-java/
 │   ├── ChunkEngine          多线程批量处理引擎
 │   └── model/BatchResult    批量处理结果
 │
-└── chunker-starter/       # 集成层：Spring Boot 自动装配
-    ├── SmartChunkerTemplate    便捷模板类
-    └── config/                 自动配置 & 属性绑定
+├── chunker-starter/       # 集成层：Spring Boot 自动装配
+│   ├── SmartChunkerTemplate    便捷模板类
+│   └── config/                 自动配置 & 属性绑定
+│
+├── embed-core/            # 向量化层：Embedding 模型抽象
+│   ├── EmbeddingModel        接口定义
+│   ├── DummyEmbeddingModel   SHA-256 伪向量（测试用）
+│   ├── OnnxEmbeddingModel    ONNX Runtime 本地推理
+│   ├── OnnxTokenizer         BERT 风格子词分词器
+│   └── EmbeddingFactory      工厂类
+│
+├── vector-store/          # 存储层：向量索引与检索
+│   ├── VectorStore           接口定义
+│   ├── InMemoryVectorStore   暴力搜索（余弦相似度）
+│   ├── HnswVectorStore       HNSW 近似最近邻搜索
+│   └── HnswConfig            索引参数配置
+│
+└── vector-engine/         # 编排层：切片→向量化→存储→检索
+    ├── VectorPipeline        端到端流水线
+    └── model/                搜索结果模型
 ```
 
 ### 依赖关系
 
 ```
 chunker-starter  ──▶  chunker-engine  ──▶  chunker-core  ──▶  flexmark-java
-```
+
+vector-engine  ──▶  embed-core  ──▶  onnxruntime (可选)
+              ──▶  vector-store
+              ──▶  chunker-core
 
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | [flexmark-java](https://github.com/vsch/flexmark-java) | 0.64.8 | Markdown AST 解析 |
 | SLF4J | 1.7.36 | 日志门面 |
 | Spring Boot | 2.7.18 | 可选，仅 starter 模块需要 |
+| ONNX Runtime | 1.17.1 | 可选，本地 Embedding 推理 |
 | JUnit | 4.13.2 | 测试框架 |
 
 ---
@@ -259,6 +284,83 @@ public class BatchDemo {
 }
 ```
 
+### 4. 向量管道（v2.0）
+
+从 Markdown 文档到向量检索的端到端流水线：
+
+```java
+import com.smartchunker.core.config.ChunkConfig;
+import com.smartchunker.embed.EmbeddingModel;
+import com.smartchunker.embed.EmbeddingFactory;
+import com.smartchunker.store.VectorStore;
+import com.smartchunker.store.VectorStoreFactory;
+import com.smartchunker.store.impl.HnswConfig;
+import com.smartchunker.engine.VectorPipeline;
+import com.smartchunker.engine.model.IndexResult;
+import com.smartchunker.engine.model.SearchResult;
+
+import java.io.File;
+import java.util.List;
+
+public class VectorDemo {
+    public static void main(String[] args) {
+        // 1. 创建 Embedding 模型
+        EmbeddingModel embedModel = EmbeddingFactory.createDummyModel(384);
+
+        // 2. 创建向量存储（HNSW 近似搜索）
+        HnswConfig hnswConfig = new HnswConfig();
+        hnswConfig.setM(16);
+        hnswConfig.setEfConstruction(200);
+        VectorStore vectorStore = VectorStoreFactory.createHnswStore(384, hnswConfig);
+
+        // 3. 创建端到端流水线
+        ChunkConfig chunkConfig = new ChunkConfig(800, 100);
+        VectorPipeline pipeline = new VectorPipeline(chunkConfig, embedModel, vectorStore);
+
+        // 4. 索引文档
+        File docsDir = new File("/path/to/markdown/docs");
+        IndexResult indexResult = pipeline.indexDirectory(docsDir);
+        System.out.println("索引完成: " + indexResult.getChunks() + " 个分块");
+
+        // 5. 语义搜索
+        List<SearchResult> results = pipeline.search("如何配置数据库连接", 5);
+        for (SearchResult r : results) {
+            System.out.printf("[%.4f] %s%n", r.getScore(), r.getContextPath());
+            System.out.println(r.getContent().substring(0, 100) + "...");
+        }
+    }
+}
+```
+
+### 5. 向量存储（独立使用）
+
+```java
+import com.smartchunker.store.VectorStore;
+import com.smartchunker.store.VectorStoreFactory;
+import com.smartchunker.store.model.VectorDoc;
+import com.smartchunker.store.model.SearchHit;
+
+import java.util.List;
+
+public class StoreDemo {
+    public static void main(String[] args) {
+        // 内存存储（暴力搜索，精确但慢）
+        VectorStore store = VectorStoreFactory.createInMemoryStore(384);
+
+        // 或 HNSW 存储（近似搜索，快但略有精度损失）
+        // VectorStore store = VectorStoreFactory.createHnswStore(384);
+
+        // 添加向量
+        store.add(new VectorDoc("doc1", new float[384]));
+        store.add(new VectorDoc("doc2", new float[384]));
+
+        // 搜索
+        float[] query = new float[384];
+        List<SearchHit> hits = store.search(query, 5);
+    }
+}
+```
+
 ---
 
 ## ⚙️ 配置说明
@@ -280,11 +382,27 @@ ChunkConfig config = new ChunkConfig(800, 100, true, true);
 ChunkConfig config = new ChunkConfig(800, 100);
 ```
 
+### HnswConfig 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `m` | `int` | `16` | 每个节点的最大连接数（越大越精确，越慢） |
+| `efConstruction` | `int` | `200` | 构建时的搜索宽度（越大索引质量越高） |
+| `efSearch` | `int` | `50` | 查询时的搜索宽度（越大越精确，越慢） |
+| `maxLayer` | `int` | `6` | 最大层数 |
+
+```java
+HnswConfig config = new HnswConfig();
+config.setM(32);               // 高精度场景
+config.setEfConstruction(400); // 构建质量优先
+config.setEfSearch(100);       // 查询精度优先
+```
+
 ---
 
 ## 📊 性能基准
 
-> 测试环境：Kylin OS V10 / JDK 17 / 16 核 32GB RAM
+> 测试环境：JDK 17 / 16 核 32GB RAM
 
 | 测试场景 | 文件大小 | 处理耗时 | 内存峰值 | 代码块截断率 |
 |----------|---------|----------|---------|-------------|
@@ -296,9 +414,12 @@ ChunkConfig config = new ChunkConfig(800, 100);
 ## 🗺️ 路线图
 
 - [x] **v1.0-Alpha** — 多模块骨架搭建，基于 flexmark 的 AST 解析与代码块保护算法
-- [ ] **v1.1-Beta** — 引入 `CompletableFuture` 多线程流水线，批量文件极速解析
-- [ ] **v1.2-Release** — 完善 `chunker-starter`，全面支持 Spring Boot 生态
-- [ ] **v2.0** — 内置轻量级本地向量库，实现从文本到 Embedding 的单机全流程处理
+- [x] **v1.1-Beta** — 引入 `CompletableFuture` 多线程流水线，批量文件极速解析
+- [x] **v1.2-Release** — 完善 `chunker-starter`，全面支持 Spring Boot 生态
+- [x] **v2.0** — 内置轻量级本地向量库（Embedding 抽象 + HNSW 索引 + 端到端管道）
+- [ ] **v2.1** — ONNX Runtime 本地模型推理完善，支持主流 Embedding 模型（bge / m3e 等）
+- [ ] **v2.2** — 向量库持久化，支持索引的保存与加载
+- [ ] **v3.0** — REST API 服务化，提供 HTTP 接口供外部调用
 
 ---
 
